@@ -1,4 +1,8 @@
 #include<cmath>
+#include<glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include "helpers.h"
 #include "shaderClass.h"
 #include "VBO.h"
@@ -12,16 +16,36 @@ const int WINDOW_HEIGHT = 1080;
 
 
 
-GLfloat vertices[] = {                 // colors
-	-0.5f, -0.5f, 0.0f,      0.8f, 0.3f, 0.02f,      0.0f, 0.0f,
-	-0.5f,  0.5f, 0.0f,      0.8f, 0.3f, 0.2f,       0.0f, 1.0f,
-	 0.5f,  0.5f, 0.0f,      1.0f, 0.6f, 0.32f,		 1.0f, 1.0f,
-	 0.5f, -0.5f, 0.0f,      0.9f, 0.45f, 0.17f,	 1.0f, 0.0f
+GLfloat vertices[] = {
+	// Position              // Color               // Texture
+
+	// Base
+	-0.5f, 0.0f, -0.5f,      1.0f, 0.0f, 0.0f,      0.0f, 0.0f, // 0
+	-0.5f, 0.0f,  0.5f,      0.0f, 1.0f, 0.0f,      0.0f, 1.0f, // 1
+	 0.5f, 0.0f,  0.5f,      0.0f, 0.0f, 1.0f,      1.0f, 1.0f, // 2
+	 0.5f, 0.0f, -0.5f,      1.0f, 1.0f, 0.0f,      1.0f, 0.0f, // 3
+
+	 // Tip
+	  0.0f, 0.8f, 0.0f,       1.0f, 0.0f, 1.0f,      0.5f, 0.5f  // 4
 };
 
 GLuint indices[] = {
-	0, 2, 1,
-	0, 3, 2
+
+	// Base
+	0, 1, 2,
+	0, 2, 3,
+
+	// Front
+	0, 4, 3,
+
+	// Right
+	3, 4, 2,
+
+	// Back
+	2, 4, 1,
+
+	// Left
+	1, 4, 0
 };
 
 int main() {
@@ -59,6 +83,8 @@ int main() {
 	Texture popCat("popcat.png", GL_TEXTURE_2D, GL_TEXTURE0, GL_RGBA, GL_UNSIGNED_BYTE);
 	popCat.texUnit(shader, "tex0", 0);
 
+	float rotation = 0.0f;
+	double prevTime = glfwGetTime();
 
 	// keep the window open
 	while (!glfwWindowShouldClose(window)) {
@@ -66,9 +92,36 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		shader.Activate();
-		glUniform1f(uniID, 0.5f);
-		popCat.Bind();
 
+		double crntTime = glfwGetTime();
+
+		if ((crntTime - prevTime) >= 1 / 60) {
+			rotation += 0.02f;
+			prevTime = crntTime;
+		}
+
+
+
+		glm::mat4 model = glm::mat4(1.0f);
+		glm::mat4 view = glm::mat4(1.0f);
+		glm::mat4 proj = glm::mat4(1.0f);
+
+		model = glm::rotate(model, glm::radians(rotation), glm::vec3(0.0f, 1.0f, 0.0f));
+		view = glm::translate(view, glm::vec3(0.0f, -0.5f, -2.0f));
+		proj = glm::perspective(glm::radians(45.0f), (float)(WINDOW_WIDTH / WINDOW_HEIGHT), 0.1f, 100.0f);
+
+		int modelLoc = glGetUniformLocation(shader.ID, "model");
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+		int viewLoc = glGetUniformLocation(shader.ID, "view");
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+		int projLoc = glGetUniformLocation(shader.ID, "proj");
+		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(proj));
+
+
+		glUniform1f(uniID, 2.0f);
+		popCat.Bind();
 		VAO1.Bind();
 
 
